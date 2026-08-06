@@ -1,0 +1,30 @@
+node_modules/
+dist/
+build/
+.cache/
+.env*
+.vite/
+vite.config.*.timestamp-*
+*.tsbuildinfo
+*-debug.log*
+logs/
+*.log
+.claude-replay.*
+.tmp-*
+
+# Android native project
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/captures/
+android/.idea/
+android/*.iml
+
+# iOS native project
+ios/App/build/
+ios/App/DerivedData/
+ios/App/Pods/
+ios/App/**/xcuserdata/
+*.xcuserstate
+.DS_Store

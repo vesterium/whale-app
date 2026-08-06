@@ -1,0 +1,11 @@
+{
+  "title": "Whale — Digital Specialists",
+  "description": "Connects businesses with verified digital specialists for booking, portfolio review, secure payments, and seamless communication to boost brand growth.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
