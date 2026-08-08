@@ -26,9 +26,6 @@ jobs:
       - name: Sync Capacitor iOS
         run: npx cap sync ios
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.app
-
       - name: Resolve Swift Package dependencies
         run: |
           xcodebuild -resolvePackageDependencies \
