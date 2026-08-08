@@ -41,7 +41,7 @@ jobs:
             -project ios/App/App.xcodeproj \
             -scheme App \
             -configuration Debug \
-            -sdk iphonesimulator \
+           -destination 'platform=iOS Simulator,name=iPhone 16' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
