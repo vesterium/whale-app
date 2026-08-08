@@ -35,13 +35,30 @@ jobs:
             -project ios/App/App.xcodeproj \
             -scheme App
 
+      - name: Pick an installed simulator
+        run: |
+          DEVICE_ID=$(xcrun simctl list devices available -j | /usr/bin/python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for runtime, devices in data['devices'].items():
+              if 'iOS' not in runtime:
+                  continue
+              for d in devices:
+                  if 'iPhone' in d['name']:
+                      print(d['udid'])
+                      sys.exit(0)
+          sys.exit(1)
+          ")
+          echo "Using simulator: $DEVICE_ID"
+          echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
+
       - name: Build for iOS Simulator (unsigned)
         run: |
           xcodebuild build \
             -project ios/App/App.xcodeproj \
             -scheme App \
             -configuration Debug \
-           -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination "id=$DEVICE_ID" \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
