@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight, CreditCard, Wallet, Landmark, CheckCircle2, Lock } from 'lucide-react'
-import { SPECIALISTS, SUBSCRIPTIONS, BUSY_DAYS, AVAILABLE_SLOTS, formatPrice } from '../data'
-import type { Screen } from '../types'
+import { SUBSCRIPTIONS, BUSY_DAYS, AVAILABLE_SLOTS, formatPrice } from '../data'
+import { createOrder, getOrCreateConversation } from '../lib/api'
+import type { Screen, Specialist } from '../types'
 
 interface Props {
+  specialists: Specialist[]
   specialistId: string
+  onBookingConfirmed: () => void
   onNavigate: (screen: Screen) => void
   onBack: () => void
 }
@@ -20,13 +23,14 @@ const PAYMENT_METHODS = [
   { id: 'visa',    label: 'Visa',      icon: CreditCard, color: '#1A1F71' },
 ]
 
-export default function BookingScreen({ specialistId, onNavigate, onBack }: Props) {
-  const sp = SPECIALISTS.find(s => s.id === specialistId)
+export default function BookingScreen({ specialists, specialistId, onBookingConfirmed, onNavigate, onBack }: Props) {
+  const sp = specialists.find(s => s.id === specialistId)
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
   const [selectedSub, setSelectedSub] = useState(SUBSCRIPTIONS[0].id)
   const [selectedPayment, setSelectedPayment] = useState(PAYMENT_METHODS[0].id)
   const [booked, setBooked] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const [step, setStep] = useState<'date' | 'sub' | 'pay'>('date')
 
   if (!sp) return null
@@ -44,9 +48,24 @@ export default function BookingScreen({ specialistId, onNavigate, onBack }: Prop
 
   const sub = SUBSCRIPTIONS.find(s => s.id === selectedSub) ?? SUBSCRIPTIONS[0]
 
-  function handleConfirm() {
-    setBooked(true)
-    setTimeout(() => onNavigate({ name: 'chats' }), 2200)
+  async function handleConfirm() {
+    setConfirming(true)
+    try {
+      await createOrder({
+        specialistId: sp!.id,
+        date: `${selectedDay} Aug 2025`,
+        service: sub.name,
+        status: 'confirmed',
+        amount: sub.price,
+      })
+      const conversationId = await getOrCreateConversation(sp!.id)
+      onBookingConfirmed()
+      setBooked(true)
+      setTimeout(() => onNavigate({ name: 'chat', conversationId }), 2200)
+    } catch (err) {
+      console.error(err)
+      setConfirming(false)
+    }
   }
 
   if (booked) {
@@ -360,10 +379,11 @@ export default function BookingScreen({ specialistId, onNavigate, onBack }: Prop
             <button onClick={() => setStep('sub')} className="glass" style={{ padding: '16px 18px', borderRadius: 18, border: '1px solid rgba(255,255,255,0.15)', color: 'white', display: 'flex', alignItems: 'center' }}><ChevronLeft size={19} /></button>
             <button
               onClick={handleConfirm}
+              disabled={confirming}
               className="tiffany-glow"
-              style={{ flex: 1, padding: '16px', borderRadius: 18, border: 'none', background: '#0ABAB5', color: '#080808', fontSize: 16, fontWeight: 800, fontFamily: 'Outfit, sans-serif' }}
+              style={{ flex: 1, padding: '16px', borderRadius: 18, border: 'none', background: '#0ABAB5', color: '#080808', fontSize: 16, fontWeight: 800, fontFamily: 'Outfit, sans-serif', opacity: confirming ? 0.6 : 1 }}
             >
-              Pay {formatPrice(sub.price)} →
+              {confirming ? 'Processing...' : `Pay ${formatPrice(sub.price)} →`}
             </button>
           </div>
         )}

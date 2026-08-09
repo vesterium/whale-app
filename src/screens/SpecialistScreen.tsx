@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronLeft, Heart, Share2, Check, MapPin, Star, MessageCircle } from 'lucide-react'
-import { SPECIALISTS, REVIEWS, getLevelConfig, formatPrice } from '../data'
-import type { Screen } from '../types'
+import { getLevelConfig, formatPrice } from '../data'
+import { fetchReviews } from '../lib/api'
+import type { Screen, Specialist, Review } from '../types'
 
 interface Props {
+  specialists: Specialist[]
   specialistId: string
   onNavigate: (screen: Screen) => void
   onBack: () => void
@@ -11,10 +13,15 @@ interface Props {
 
 type Tab = 'portfolio' | 'about' | 'reviews'
 
-export default function SpecialistScreen({ specialistId, onNavigate, onBack }: Props) {
-  const sp = SPECIALISTS.find(s => s.id === specialistId)
+export default function SpecialistScreen({ specialists, specialistId, onNavigate, onBack }: Props) {
+  const sp = specialists.find(s => s.id === specialistId)
   const [tab, setTab] = useState<Tab>('portfolio')
   const [liked, setLiked] = useState(false)
+  const [reviews, setReviews] = useState<Review[]>([])
+
+  useEffect(() => {
+    fetchReviews(specialistId).then(setReviews).catch(err => console.error(err))
+  }, [specialistId])
 
   if (!sp) return (
     <div style={{ background: '#080808', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
@@ -22,7 +29,6 @@ export default function SpecialistScreen({ specialistId, onNavigate, onBack }: P
     </div>
   )
 
-  const reviews = REVIEWS[sp.id] ?? []
   const level = getLevelConfig(sp.level)
 
   return (

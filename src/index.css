@@ -93,6 +93,14 @@ body {
   animation: pulseTiffany 2s ease infinite;
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  animation: spin 0.7s linear infinite;
+}
+
 input, textarea, select {
   font-family: 'Outfit', sans-serif;
 }

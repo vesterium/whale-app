@@ -1,22 +1,29 @@
 import { useState, useRef, useEffect } from 'react'
 import { ChevronLeft, Phone, Paperclip, MapPin, Image, ClipboardList, Smile, Send, MessageCircle } from 'lucide-react'
-import { SPECIALISTS, CONVERSATIONS, MESSAGES } from '../data'
-import type { Screen, Message } from '../types'
+import { fetchMessages, sendMessage as sendMessageApi, subscribeToMessages } from '../lib/api'
+import type { Screen, Message, Specialist, Conversation } from '../types'
 
 interface Props {
+  specialists: Specialist[]
+  conversations: Conversation[]
   conversationId?: string
+  onRefreshConversations: () => void
   onNavigate: (screen: Screen) => void
   onBack: () => void
 }
 
-function ConversationList({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
+function ConversationList({ specialists, conversations, onNavigate }: {
+  specialists: Specialist[]
+  conversations: Conversation[]
+  onNavigate: (screen: Screen) => void
+}) {
   return (
     <div style={{ background: '#080808', minHeight: '100%', paddingBottom: 100 }}>
       <div style={{ padding: '56px 20px 20px', background: 'linear-gradient(180deg, #0f1410 0%, #080808 100%)' }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Messages</h1>
       </div>
 
-      {CONVERSATIONS.length === 0 ? (
+      {conversations.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '80px 32px', color: 'rgba(255,255,255,0.4)' }}>
           <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
             <MessageCircle size={40} color="rgba(255,255,255,0.3)" />
@@ -25,8 +32,8 @@ function ConversationList({ onNavigate }: { onNavigate: (screen: Screen) => void
         </div>
       ) : (
         <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {CONVERSATIONS.map(conv => {
-            const sp = SPECIALISTS.find(s => s.id === conv.specialistId)
+          {conversations.map(conv => {
+            const sp = specialists.find(s => s.id === conv.specialistId)
             if (!sp) return null
             return (
               <button
@@ -82,39 +89,44 @@ function ConversationList({ onNavigate }: { onNavigate: (screen: Screen) => void
   )
 }
 
-function ChatThread({ conversationId, onBack }: { conversationId: string; onBack: () => void }) {
-  const conv = CONVERSATIONS.find(c => c.id === conversationId)
-  const sp = conv ? SPECIALISTS.find(s => s.id === conv.specialistId) : null
-  const [messages, setMessages] = useState<Message[]>(MESSAGES)
+function ChatThread({ specialists, conversations, conversationId, onRefreshConversations, onBack }: {
+  specialists: Specialist[]
+  conversations: Conversation[]
+  conversationId: string
+  onRefreshConversations: () => void
+  onBack: () => void
+}) {
+  const conv = conversations.find(c => c.id === conversationId)
+  const sp = conv ? specialists.find(s => s.id === conv.specialistId) : null
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    fetchMessages(conversationId).then(setMessages).catch(err => console.error(err))
+    return subscribeToMessages(conversationId, message => {
+      setMessages(prev => (prev.some(m => m.id === message.id) ? prev : [...prev, message]))
+    })
+  }, [conversationId])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  function sendMessage() {
-    if (!input.trim()) return
-    const newMsg: Message = {
-      id: `m${Date.now()}`,
-      from: 'me',
-      text: input.trim(),
-      time: new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }),
-    }
-    setMessages(prev => [...prev, newMsg])
+  async function sendMessage() {
+    const text = input.trim()
+    if (!text) return
     setInput('')
-
-    setTimeout(() => {
-      setMessages(prev => [
-        ...prev,
-        {
-          id: `m${Date.now() + 1}`,
-          from: 'them',
-          text: 'Got it! I\'ll prepare everything for the session.',
-          time: new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }),
-        },
-      ])
-    }, 1200)
+    try {
+      await sendMessageApi(conversationId, 'me', text)
+      onRefreshConversations()
+      setTimeout(async () => {
+        await sendMessageApi(conversationId, 'them', "Got it! I'll prepare everything for the session.")
+        onRefreshConversations()
+      }, 1200)
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   if (!sp) return null
@@ -259,9 +271,17 @@ function ChatThread({ conversationId, onBack }: { conversationId: string; onBack
   )
 }
 
-export default function ChatScreen({ conversationId, onNavigate, onBack }: Props) {
+export default function ChatScreen({ specialists, conversations, conversationId, onRefreshConversations, onNavigate, onBack }: Props) {
   if (conversationId) {
-    return <ChatThread conversationId={conversationId} onBack={onBack} />
+    return (
+      <ChatThread
+        specialists={specialists}
+        conversations={conversations}
+        conversationId={conversationId}
+        onRefreshConversations={onRefreshConversations}
+        onBack={onBack}
+      />
+    )
   }
-  return <ConversationList onNavigate={onNavigate} />
+  return <ConversationList specialists={specialists} conversations={conversations} onNavigate={onNavigate} />
 }

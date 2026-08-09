@@ -1,12 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Settings, User, Clapperboard, ClipboardList, Wallet, CheckCircle2, Star,
   Users, BarChart3, Heart, Calendar, TrendingUp, Check, type LucideIcon,
 } from 'lucide-react'
-import { SPECIALISTS, ORDERS, CONVERSATIONS } from '../data'
-import type { Screen } from '../types'
+import { fetchOrders } from '../lib/api'
+import type { Screen, Specialist, Order } from '../types'
 
 interface Props {
+  specialists: Specialist[]
   onNavigate: (screen: Screen) => void
 }
 
@@ -37,8 +38,13 @@ function StatCard({ icon: Icon, label, value, sub, accent }: { icon: LucideIcon;
   )
 }
 
-export default function DashboardScreen({ onNavigate }: Props) {
+export default function DashboardScreen({ specialists, onNavigate }: Props) {
   const [mode, setMode] = useState<'client' | 'specialist'>('client')
+  const [orders, setOrders] = useState<Order[]>([])
+
+  useEffect(() => {
+    fetchOrders().then(setOrders).catch(err => console.error(err))
+  }, [])
 
   return (
     <div style={{ background: '#080808', minHeight: '100%', paddingBottom: 100 }}>
@@ -130,8 +136,8 @@ export default function DashboardScreen({ onNavigate }: Props) {
           <div>
             <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700 }}>Recent Orders</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {ORDERS.map(order => {
-                const sp = SPECIALISTS.find(s => s.id === order.specialistId)
+              {orders.map(order => {
+                const sp = specialists.find(s => s.id === order.specialistId)
                 if (!sp) return null
                 const status = STATUS_CONFIG[order.status]
                 return (
@@ -211,7 +217,7 @@ export default function DashboardScreen({ onNavigate }: Props) {
               <Heart size={16} fill="#ff4d6d" stroke="#ff4d6d" /> Favorites
             </h2>
             <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto' }}>
-              {SPECIALISTS.slice(0, 4).map(sp => (
+              {specialists.slice(0, 4).map(sp => (
                 <button
                   key={sp.id}
                   onClick={() => onNavigate({ name: 'specialist', id: sp.id })}

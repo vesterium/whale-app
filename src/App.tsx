@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Home, Search, ClipboardList, MessageCircle, User, type LucideIcon } from 'lucide-react'
 import HomeScreen from './screens/HomeScreen'
 import SearchScreen from './screens/SearchScreen'
@@ -6,8 +6,8 @@ import SpecialistScreen from './screens/SpecialistScreen'
 import BookingScreen from './screens/BookingScreen'
 import ChatScreen from './screens/ChatScreen'
 import DashboardScreen from './screens/DashboardScreen'
-import type { Screen, TabName, CategoryKey } from './types'
-import { CONVERSATIONS } from './data'
+import type { Screen, TabName, Specialist, Conversation } from './types'
+import { fetchSpecialists, fetchConversations } from './lib/api'
 
 const TABS: { name: TabName; icon: LucideIcon; label: string }[] = [
   { name: 'home',     icon: Home,           label: 'Home' },
@@ -89,9 +89,27 @@ function BottomNav({ activeTab, onTabChange, unreadMessages }: {
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabName>('home')
   const [screenStack, setScreenStack] = useState<Screen[]>([{ name: 'home' }])
+  const [specialists, setSpecialists] = useState<Specialist[]>([])
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const currentScreen = screenStack[screenStack.length - 1]
-  const unreadMessages = CONVERSATIONS.reduce((sum, c) => sum + c.unread, 0)
+  const unreadMessages = conversations.reduce((sum, c) => sum + c.unread, 0)
+
+  const refreshConversations = useCallback(() => {
+    fetchConversations().then(setConversations).catch(err => console.error(err))
+  }, [])
+
+  useEffect(() => {
+    Promise.all([fetchSpecialists(), fetchConversations()])
+      .then(([sp, conv]) => {
+        setSpecialists(sp)
+        setConversations(conv)
+      })
+      .catch(err => setLoadError(err.message ?? 'Failed to load data'))
+      .finally(() => setLoading(false))
+  }, [])
 
   function navigate(screen: Screen) {
     setScreenStack(prev => [...prev, screen])
@@ -123,21 +141,38 @@ export default function App() {
   function renderScreen(screen: Screen) {
     switch (screen.name) {
       case 'home':
-        return <HomeScreen onNavigate={navigate} />
+        return <HomeScreen specialists={specialists} onNavigate={navigate} />
       case 'search':
-        return <SearchScreen initialCategory={screen.category} onNavigate={navigate} />
+        return <SearchScreen specialists={specialists} initialCategory={screen.category} onNavigate={navigate} />
       case 'specialist':
-        return <SpecialistScreen specialistId={screen.id} onNavigate={navigate} onBack={goBack} />
+        return <SpecialistScreen specialists={specialists} specialistId={screen.id} onNavigate={navigate} onBack={goBack} />
       case 'booking':
-        return <BookingScreen specialistId={screen.specialistId} onNavigate={navigate} onBack={goBack} />
+        return (
+          <BookingScreen
+            specialists={specialists}
+            specialistId={screen.specialistId}
+            onBookingConfirmed={refreshConversations}
+            onNavigate={navigate}
+            onBack={goBack}
+          />
+        )
       case 'chats':
-        return <ChatScreen onNavigate={navigate} onBack={goBack} />
+        return <ChatScreen specialists={specialists} conversations={conversations} onRefreshConversations={refreshConversations} onNavigate={navigate} onBack={goBack} />
       case 'chat':
-        return <ChatScreen conversationId={screen.conversationId} onNavigate={navigate} onBack={goBack} />
+        return (
+          <ChatScreen
+            specialists={specialists}
+            conversations={conversations}
+            conversationId={screen.conversationId}
+            onRefreshConversations={refreshConversations}
+            onNavigate={navigate}
+            onBack={goBack}
+          />
+        )
       case 'dashboard':
-        return <DashboardScreen onNavigate={navigate} />
+        return <DashboardScreen specialists={specialists} onNavigate={navigate} />
       default:
-        return <HomeScreen onNavigate={navigate} />
+        return <HomeScreen specialists={specialists} onNavigate={navigate} />
     }
   }
 
@@ -180,7 +215,18 @@ export default function App() {
           className="fade-in"
           style={{ minHeight: '100vh' }}
         >
-          {renderScreen(currentScreen)}
+          {loading ? (
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="spinner" style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid rgba(10,186,181,0.25)', borderTopColor: '#0ABAB5' }} />
+            </div>
+          ) : loadError ? (
+            <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
+              <p style={{ color: 'white', fontWeight: 700 }}>Couldn't reach the server</p>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{loadError}</p>
+            </div>
+          ) : (
+            renderScreen(currentScreen)
+          )}
         </div>
 
         {/* Bottom nav */}

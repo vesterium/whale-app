@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
 import { Search, Star, Wallet, FolderKanban, Check, MapPin } from 'lucide-react'
-import { SPECIALISTS, CATEGORIES } from '../data'
-import type { Screen, CategoryKey } from '../types'
+import { CATEGORIES } from '../data'
+import type { Screen, CategoryKey, Specialist } from '../types'
 
 interface Props {
+  specialists: Specialist[]
   initialCategory?: CategoryKey
   onNavigate: (screen: Screen) => void
 }
@@ -17,14 +18,14 @@ function StarRating({ rating }: { rating: number }) {
   )
 }
 
-export default function SearchScreen({ initialCategory, onNavigate }: Props) {
+export default function SearchScreen({ specialists, initialCategory, onNavigate }: Props) {
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<CategoryKey | null>(initialCategory ?? null)
   const [sortBy, setSortBy] = useState<'rating' | 'price_low' | 'price_high' | 'projects'>('rating')
   const [showFilters, setShowFilters] = useState(false)
 
   const results = useMemo(() => {
-    let list = [...SPECIALISTS]
+    let list = [...specialists]
     if (activeCategory) list = list.filter(s => s.categoryKey === activeCategory)
     if (query.trim()) {
       const q = query.toLowerCase()
@@ -40,7 +41,7 @@ export default function SearchScreen({ initialCategory, onNavigate }: Props) {
       case 'price_high': return list.sort((a, b) => b.price - a.price)
       case 'projects':   return list.sort((a, b) => b.projects - a.projects)
     }
-  }, [query, activeCategory, sortBy])
+  }, [specialists, query, activeCategory, sortBy])
 
   return (
     <div style={{ background: '#080808', minHeight: '100%', paddingBottom: 100 }}>

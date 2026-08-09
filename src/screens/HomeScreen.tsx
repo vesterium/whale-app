@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Star, Bell, Search, Sparkles, Check } from 'lucide-react'
-import { SPECIALISTS, CATEGORIES, getLevelConfig } from '../data'
-import type { Screen } from '../types'
+import { CATEGORIES, getLevelConfig } from '../data'
+import type { Screen, Specialist } from '../types'
 
 interface Props {
+  specialists: Specialist[]
   onNavigate: (screen: Screen) => void
 }
 
@@ -26,11 +27,11 @@ function LevelBadge({ level }: { level: string }) {
   return <cfg.icon size={15} color={cfg.color} strokeWidth={2.2} />
 }
 
-export default function HomeScreen({ onNavigate }: Props) {
+export default function HomeScreen({ specialists, onNavigate }: Props) {
   const [searchValue, setSearchValue] = useState('')
 
-  const featured = SPECIALISTS.filter(s => s.level === 'gold' || s.level === 'platinum').slice(0, 5)
-  const newOnes  = SPECIALISTS.filter(s => s.isNew).slice(0, 4)
+  const featured = specialists.filter(s => s.level === 'gold' || s.level === 'platinum').slice(0, 5)
+  const newOnes  = specialists.filter(s => s.isNew).slice(0, 4)
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
